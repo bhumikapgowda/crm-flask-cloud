@@ -219,7 +219,15 @@ def logout():
     flash('You have been logged out', 'info')
     return redirect(url_for('login'))
 
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(host='0.0.0.0', port=10000)
+        seed_database()
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
+
+
+@app.route('/healthz')
+def health_check():
+    return "OK", 200
+
