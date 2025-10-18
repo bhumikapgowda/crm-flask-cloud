@@ -1,0 +1,258 @@
+<!-- templates/dashboard.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CRM Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100">
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <i class="fas fa-chart-line text-blue-500 text-2xl"></i>
+                        <span class="ml-2 text-xl font-bold">CRM Dashboard</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="text-gray-700 mr-4">Welcome, {{ user.full_name }}</span>
+                    <a href="{{ url_for('logout') }}" class="text-red-500 hover:text-red-700">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow-md p-6 transform hover:scale-105 transition-transform duration-300">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 text-blue-500">
+                        <i class="fas fa-users text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-gray-500">Total Customers</p>
+                        <p class="text-2xl font-bold">{{ total_customers }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6 transform hover:scale-105 transition-transform duration-300">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 text-green-500">
+                        <i class="fas fa-tasks text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-gray-500">Total Tasks</p>
+                        <p class="text-2xl font-bold">{{ total_tasks }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-md p-6 transform hover:scale-105 transition-transform duration-300">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-yellow-100 text-yellow-500">
+                        <i class="fas fa-clock text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-gray-500">Pending Tasks</p>
+                        <p class="text-2xl font-bold">{{ pending_tasks }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Customer Management Section -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-xl font-bold mb-4">Customer Management</h2>
+                    <button onclick="toggleCustomerForm()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-4">
+                        <i class="fas fa-plus mr-2"></i>Add New Customer
+                    </button>
+                    
+                    <!-- Add Customer Form (Hidden by default) -->
+                    <div id="customerForm" class="hidden mb-6">
+                        <form action="{{ url_for('add_customer') }}" method="POST" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Name</label>
+                                    <input type="text" name="name" class="w-full p-2 border rounded" required>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Email</label>
+                                    <input type="email" name="email" class="w-full p-2 border rounded" required>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Phone</label>
+                                    <input type="tel" name="phone" class="w-full p-2 border rounded">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Company</label>
+                                    <input type="text" name="company" class="w-full p-2 border rounded">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Status</label>
+                                    <select name="status" class="w-full p-2 border rounded">
+                                        <option value="Lead">Lead</option>
+                                        <option value="Prospect">Prospect</option>
+                                        <option value="Customer">Customer</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2">Notes</label>
+                                <textarea name="notes" class="w-full p-2 border rounded" rows="3"></textarea>
+                            </div>
+                            <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                                Save Customer
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Customers Table -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                {% for customer in customers %}
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap">{{ customer.name }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">{{ customer.email }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                            {% if customer.status == 'Lead' %}bg-yellow-100 text-yellow-800
+                                            {% elif customer.status == 'Prospect' %}bg-blue-100 text-blue-800
+                                            {% else %}bg-green-100 text-green-800{% endif %}">
+                                            {{ customer.status }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">{{ customer.company }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <button class="text-blue-500 hover:text-blue-700 mr-2">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-500 hover:text-red-700">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task Management Section -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                    <h2 class="text-xl font-bold mb-4">Task Management</h2>
+                    <button onclick="toggleTaskForm()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-4">
+                        <i class="fas fa-plus mr-2"></i>Add New Task
+                    </button>
+
+                    <!-- Add Task Form (Hidden by default) -->
+                    <div id="taskForm" class="hidden mb-6">
+                        <form action="{{ url_for('add_task') }}" method="POST" class="space-y-4">
+                            <div>
+                                <label class="block text-gray-700 mb-2">Title</label>
+                                <input type="text" name="title" class="w-full p-2 border rounded" required>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2">Description</label>
+                                <textarea name="description" class="w-full p-2 border rounded" rows="3"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2">Due Date</label>
+                                <input type="date" name="due_date" class="w-full p-2 border rounded" required>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2">Priority</label>
+                                <select name="priority" class="w-full p-2 border rounded">
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 mb-2">Related Customer</label>
+                                <select name="customer_id" class="w-full p-2 border rounded">
+                                    <option value="">None</option>
+                                    {% for customer in customers %}
+                                    <option value="{{ customer.id }}">{{ customer.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                                Save Task
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Tasks List -->
+                    <div class="space-y-4">
+                        {% for task in tasks %}
+                        <div class="border rounded p-4 hover:bg-gray-50">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-semibold">{{ task.title }}</h3>
+                                    <p class="text-sm text-gray-600">{{ task.description }}</p>
+                                </div>
+                                <span class="px-2 py-1 text-xs rounded-full 
+                                    {% if task.priority == 'high' %}bg-red-100 text-red-800
+                                    {% elif task.priority == 'medium' %}bg-yellow-100 text-yellow-800
+                                    {% else %}bg-green-100 text-green-800{% endif %}">
+                                    {{ task.priority }}
+                                </span>
+                            </div>
+                            <div class="mt-2 text-sm text-gray-500">
+                                <i class="far fa-calendar mr-1"></i>Due: {{ task.due_date.strftime('%Y-%m-%d') }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Toggle Forms -->
+    <script>
+        function toggleCustomerForm() {
+            const form = document.getElementById('customerForm');
+            form.classList.toggle('hidden');
+        }
+
+        function toggleTaskForm() {
+            const form = document.getElementById('taskForm');
+            form.classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html>
